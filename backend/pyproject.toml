@@ -8,6 +8,9 @@ dependencies = [
     "django-environ>=0.14.0",
     "django-filter>=26.2",
     "djangorestframework>=3.18.3",
+    "feedparser>=6.0.14",
+    "google-genai>=2.32.0",
+    "httpx>=0.28.1",
     "psycopg[binary]>=3.3.6",
 ]
 

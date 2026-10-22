@@ -11,6 +11,7 @@ class Article(models.Model):
     source = models.CharField(max_length=10, choices=Source.choices)
     published_at = models.DateTimeField()
     summary = models.TextField(blank=True)
+    excerpt = models.TextField(blank=True)
     category = models.CharField(max_length=50, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
