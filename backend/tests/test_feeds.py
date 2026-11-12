@@ -24,3 +24,10 @@ def test_parse_feed():
     assert entry.url == "https://zenn.dev/u/articles/a"
     assert entry.published_at == datetime(2026, 10, 16, 10, 0, tzinfo=UTC)
     assert entry.excerpt == "本文です"
+
+from digest.feeds import normalize_url
+
+def test_normalize_url_drops_query_and_fragment():
+    url = "https://qiita.com/u/items/abc?utm_source=feed&utm_medium=x#comments"
+
+    assert normalize_url(url) == "https://qiita.com/u/items/abc"
