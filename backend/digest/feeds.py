@@ -5,6 +5,8 @@ import feedparser
 import httpx
 from django.utils.html import strip_tags
 
+from urllib.parse import urlsplit, urlunsplit
+
 FEEDS = {
     "zenn": "https://zenn.dev/feed",
     "qiita": "https://qiita.com/popular-items/feed",
@@ -12,6 +14,9 @@ FEEDS = {
 
 USER_AGENT = "tech-digest-django/0.1"
 
+def normalize_url(url: str) -> str:
+    parts = urlsplit(url)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
 
 @dataclass(frozen=True)
 class FeedEntry:
@@ -32,7 +37,7 @@ def parse_feed(content: str | bytes, source: str) -> list[FeedEntry]:
             continue
         entries.append(
             FeedEntry(
-                url=link,
+                url=normalize_url(link),
                 title=e.get("title", "")[:300],
                 source=source,
                 published_at=datetime(*published[:6], tzinfo=UTC),

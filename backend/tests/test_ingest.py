@@ -4,7 +4,7 @@ import pytest
 from django.core.management import call_command
 
 from digest.feeds import FeedEntry
-from digest.models import Article
+from digest.models import EMBEDDING_DIMENSIONS, Article
 from digest.summarizer import Category, Summary
 
 TARGET = "digest.management.commands.ingest"
@@ -26,6 +26,7 @@ def fake_io(monkeypatch):
         f"{TARGET}.summarize",
         lambda title, excerpt: Summary(summary="要約", category=Category.AI),
     )
+    monkeypatch.setattr(f"{TARGET}.embed", lambda text: [0.1] * EMBEDDING_DIMENSIONS)
 
 
 @pytest.mark.django_db
@@ -37,3 +38,4 @@ def test_ingest_is_idempotent(fake_io):
     article = Article.objects.get()
     assert article.summary == "要約"
     assert article.category == "ai"
+    assert article.embedding is not None

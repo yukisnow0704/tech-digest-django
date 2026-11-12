@@ -1,11 +1,10 @@
 from enum import StrEnum
-from functools import cache
 
 from django.conf import settings
-from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
+from digest.vertex import client
 
 class Category(StrEnum):
     AI = "ai"
@@ -30,18 +29,8 @@ PROMPT = """以下の技術記事を要約し、カテゴリを1つ選んでく�
 本文抜粋: {excerpt}
 """
 
-
-@cache
-def _client() -> genai.Client:
-    return genai.Client(
-        vertexai=True,
-        project=settings.GOOGLE_CLOUD_PROJECT,
-        location="global",
-    )
-
-
 def summarize(title: str, excerpt: str) -> Summary:
-    res = _client().models.generate_content(
+    res = client().models.generate_content(
         model=settings.GEMINI_MODEL,
         contents=PROMPT.format(title=title, excerpt=excerpt),
         config=types.GenerateContentConfig(

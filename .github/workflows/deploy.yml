@@ -1,0 +1,104 @@
+name: deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  REGION: asia-northeast1
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  BUCKET: ${{ vars.GCP_PROJECT_ID }}-tfstate
+  IMAGE_REPO: asia-northeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/tech-digest/app
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.pull_request.head.sha }}
+      PR: ${{ github.event.pull_request.number }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.4
+          terraform_wrapper: false
+
+      - name: Build and push image
+        run: |
+          gcloud auth configure-docker asia-northeast1-docker.pkg.dev --quiet
+          docker build -t "$IMAGE_REPO:$TAG" backend
+          docker push "$IMAGE_REPO:$TAG"
+
+      - name: Terraform plan
+        working-directory: infra
+        run: |
+          terraform init -input=false -backend-config="bucket=$BUCKET"
+          terraform plan -input=false -out=tfplan -var="image=$IMAGE_REPO:$TAG"
+          gcloud storage cp tfplan "gs://$BUCKET/plans/pr-$PR.tfplan"
+
+  apply:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.4
+          terraform_wrapper: false
+
+      - name: Find merged PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" --jq '.[0].number')
+          if [ -z "$PR" ]; then
+            echo "::error::このコミットに紐づく PR が見つかりません。main への直接 push はしない運用です"
+            exit 1
+          fi
+          echo "PR=$PR" >> "$GITHUB_ENV"
+
+      - name: Terraform apply (saved plan)
+        working-directory: infra
+        run: |
+          terraform init -input=false -backend-config="bucket=$BUCKET"
+          gcloud storage cp "gs://$BUCKET/plans/pr-$PR.tfplan" tfplan
+          terraform apply -input=false tfplan
+
+      - name: Migrate
+        run: |
+          POLICY=$(gcloud sql instances describe tech-digest --project="$PROJECT_ID" --format="value(settings.activationPolicy)")
+          if [ "$POLICY" != "ALWAYS" ]; then
+            echo "::notice::Cloud SQL が停止中($POLICY)なので migrate をスキップします"
+            exit 0
+          fi
+          gcloud run jobs execute tech-digest-migrate --region="$REGION" --project="$PROJECT_ID" --wait

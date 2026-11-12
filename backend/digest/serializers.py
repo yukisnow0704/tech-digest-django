@@ -7,3 +7,9 @@ class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
         fields = ["id", "url", "title", "source", "published_at", "summary", "category"]
+
+class SimilarArticleSerializer(ArticleSerializer):
+    distance = serializers.FloatField(read_only=True)
+
+    class Meta(ArticleSerializer.Meta):
+        fields = [*ArticleSerializer.Meta.fields, "distance"]
