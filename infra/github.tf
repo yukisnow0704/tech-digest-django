@@ -44,6 +44,7 @@ locals {
     "roles/iam.workloadIdentityPoolAdmin",
     "roles/resourcemanager.projectIamAdmin",
     "roles/serviceusage.serviceUsageAdmin",
+    "roles/cloudscheduler.admin",
   ]
 }
 
