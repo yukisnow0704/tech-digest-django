@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from digest.vertex import client
 
+
 class Category(StrEnum):
     AI = "ai"
     WEB = "web"
@@ -28,6 +29,7 @@ PROMPT = """以下の技術記事を要約し、カテゴリを1つ選んでく�
 タイトル: {title}
 本文抜粋: {excerpt}
 """
+
 
 def summarize(title: str, excerpt: str) -> Summary:
     res = client().models.generate_content(

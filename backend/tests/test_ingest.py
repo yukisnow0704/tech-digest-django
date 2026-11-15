@@ -1,7 +1,8 @@
-from datetime import UTC, datetime
+﻿from datetime import UTC, datetime
 
 import pytest
 from django.core.management import call_command
+from django.core.management.base import CommandError
 
 from digest.feeds import FeedEntry
 from digest.models import EMBEDDING_DIMENSIONS, Article
@@ -39,3 +40,17 @@ def test_ingest_is_idempotent(fake_io):
     assert article.summary == "要約"
     assert article.category == "ai"
     assert article.embedding is not None
+
+
+@pytest.mark.django_db
+def test_ingest_fails_when_summarize_fails(fake_io, monkeypatch):
+    def broken_summarize(title, excerpt):
+        raise RuntimeError("vertex is down")
+
+    monkeypatch.setattr(f"{TARGET}.summarize", broken_summarize)
+
+    with pytest.raises(CommandError):
+        call_command("ingest")
+
+    article = Article.objects.get()
+    assert article.summary == ""

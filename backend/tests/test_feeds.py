@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from digest.feeds import parse_feed
+from digest.feeds import normalize_url, parse_feed
 
 RSS = """<?xml version="1.0"?>
 <rss version="2.0"><channel><title>Zenn</title>
@@ -16,6 +16,7 @@ RSS = """<?xml version="1.0"?>
 </item>
 </channel></rss>"""
 
+
 def test_parse_feed():
     entries = parse_feed(RSS, "zenn")
 
@@ -25,7 +26,6 @@ def test_parse_feed():
     assert entry.published_at == datetime(2026, 10, 16, 10, 0, tzinfo=UTC)
     assert entry.excerpt == "本文です"
 
-from digest.feeds import normalize_url
 
 def test_normalize_url_drops_query_and_fragment():
     url = "https://qiita.com/u/items/abc?utm_source=feed&utm_medium=x#comments"

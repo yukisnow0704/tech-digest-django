@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from urllib.parse import urlsplit, urlunsplit
 
 import feedparser
 import httpx
 from django.utils.html import strip_tags
-
-from urllib.parse import urlsplit, urlunsplit
 
 FEEDS = {
     "zenn": "https://zenn.dev/feed",
@@ -14,9 +13,11 @@ FEEDS = {
 
 USER_AGENT = "tech-digest-django/0.1"
 
+
 def normalize_url(url: str) -> str:
     parts = urlsplit(url)
     return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
 
 @dataclass(frozen=True)
 class FeedEntry:

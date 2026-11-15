@@ -4,6 +4,7 @@ from google.genai import types
 from digest.models import EMBEDDING_DIMENSIONS
 from digest.vertex import client
 
+
 def embed(text: str, *, query: bool = False) -> list[float]:
     res = client().models.embed_content(
         model=settings.EMBEDDING_MODEL,

@@ -4,8 +4,10 @@ from rest_framework.test import APIClient
 
 from digest.models import EMBEDDING_DIMENSIONS, Article
 
+
 def vec(x: float, y: float) -> list[float]:
     return [x, y] + [0.0] * (EMBEDDING_DIMENSIONS - 2)
+
 
 def make(title: str, embedding: list[float] | None) -> Article:
     return Article.objects.create(
@@ -17,6 +19,7 @@ def make(title: str, embedding: list[float] | None) -> Article:
         embedding=embedding,
     )
 
+
 @pytest.fixture
 def articles(db):
     return {
@@ -26,12 +29,14 @@ def articles(db):
         "none": make("none", None),
     }
 
+
 @pytest.mark.django_db
 def test_similar_orders_by_distance(articles):
     res = APIClient().get(f"/api/articles/{articles['a'].pk}/similar/")
 
     assert res.status_code == 200
     assert [r["title"] for r in res.json()] == ["b", "c"]
+
 
 @pytest.mark.django_db
 def test_search(articles, monkeypatch):
@@ -41,6 +46,7 @@ def test_search(articles, monkeypatch):
 
     assert res.status_code == 200
     assert [r["title"] for r in res.json()] == ["c", "b", "a"]
+
 
 @pytest.mark.django_db
 def test_search_requests_q():
