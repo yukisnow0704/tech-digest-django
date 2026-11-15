@@ -11,11 +11,13 @@ from .serializers import ArticleSerializer, SimilarArticleSerializer
 SIMILAR_LIMIT = 5
 SEARCH_LIMIT = 10
 
+
 def nearest(vector, *, limit: int, exclude_pk: int | None = None):
     qs = Article.objects.defer("embedding").filter(embedding__isnull=False)
     if exclude_pk is not None:
         qs = qs.exclude(pk=exclude_pk)
     return qs.annotate(distance=CosineDistance("embedding", vector)).order_by("distance")[:limit]
+
 
 class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Article.objects.defer("embedding")

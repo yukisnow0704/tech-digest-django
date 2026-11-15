@@ -1,5 +1,5 @@
 import httpx
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from digest.embeddings import embed
 from digest.feeds import FEEDS, fetch_feed
@@ -26,10 +26,11 @@ class Command(BaseCommand):
             failed += ng
         self.stdout.write(
             self.style.SUCCESS(
-                f"created={created} summarized={summarized} "
-                f"embedded={embedded} failed={failed}"
+                f"created={created} summarized={summarized} embedded={embedded} failed={failed}"
             )
         )
+        if failed:
+            raise CommandError(f"{failed} 件失敗しました(次回の実行で拾い直します)")
 
     def _fetch(self) -> int:
         created = 0
@@ -67,7 +68,7 @@ class Command(BaseCommand):
             article.save(update_fields=["summary", "category", "updated_at"])
             ok += 1
         return ok, ng
-    
+
     def _embed(self, limit: int) -> tuple[int, int]:
         ok, ng = 0, 0
         targets = (
